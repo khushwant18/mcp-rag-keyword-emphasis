@@ -11,7 +11,6 @@ A professional, scalable Model Context Protocol (MCP) server featuring **intelli
 - **Semantic Search with Keyword Emphasis**: Powered by nomic-ai/nomic-embed-text-v1 embedding model
 - **Vector Storage**: ChromaDB for efficient vector storage and retrieval
 - **Precision Query Control**: Focus search on specific aspects using keyword emphasis
-- **Caching System**: Smart caching to reduce redundant crawls
 - **Rate Limiting**: Built-in rate limiting for responsible crawling
 - **Multiple Extraction Strategies**: Optimized extractors for articles, products, documentation, and forums
 - **Docker Support**: Easy deployment with Docker and docker-compose
