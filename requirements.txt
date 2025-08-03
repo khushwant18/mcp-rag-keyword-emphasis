@@ -6,6 +6,6 @@ beautifulsoup4>=4.12.0
 aiohttp>=3.9.0
 numpy>=1.24.0
 python-dotenv>=1.0.0
-einops
-torch
-playwright
+einops>=0.7.0
+torch>=2.0.0
+playwright>=1.40.0
