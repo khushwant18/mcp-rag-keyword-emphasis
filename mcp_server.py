@@ -875,7 +875,7 @@ class MCPCrawlerServer:
                             "keywords": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "2-3 Keywords present in search query to emphasize in the search",
+                                "description": "Only 2-3 Keywords present in search query to emphasize in the search",
                                 "default": []
                             },
                             "collection_name": {"type": "string", "description": "Collection to search in, put default as web_documents"},
