@@ -9,3 +9,5 @@ python-dotenv>=1.0.0
 einops>=0.7.0
 torch>=2.0.0
 playwright>=1.40.0
+pytest-asyncio
+pytest
