@@ -22,7 +22,7 @@ A professional, scalable Model Context Protocol (MCP) server featuring **intelli
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   MCP Client    │────▶│   MCP Server    │────▶│   Crawl4AI      │
-│  (LLM/Claude)   │     │   (FastMCP)     │     │  (Web Scraper)  │
+│  (LLM/Claude)   │     │                 │     │  (Web Scraper)  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                                │                          │
                                ▼                          ▼
@@ -34,10 +34,10 @@ A professional, scalable Model Context Protocol (MCP) server featuring **intelli
 
 ## Installation
 
-### Using pip
+### Using bash script
 
 ```bash
-pip install -r requirements.txt
+./scripts/setup_python_mcp.sh
 ```
 
 ### Using Poetry
@@ -45,11 +45,20 @@ pip install -r requirements.txt
 ```bash
 poetry install
 ```
+### Using pip
+
+```bash
+pip install -r requirements.txt
+```
 
 ### Using Docker
 
 ```bash
-docker-compose up -d
+docker compose up -d
+```
+or
+```bash
+./scripts/setup_docker_mcp.sh
 ```
 
 ## Quick Start
@@ -68,19 +77,22 @@ docker-compose up -d
 
 3. **Run the server**
    ```bash
-   python mcp_server.py
+   ./scripts/run_python_mcp.sh
    ```
 
 4. **Connect with MCP client**
    ```bash
    # For Claude Desktop, add to config:
    {
-     "mcpServers": {
-       "web-rag": {
-         "command": "python",
-         "args": ["path/to/mcp_server.py"]
-       }
-     }
+   "mcpServers": {
+         "web-rag": {
+         "command": "/Users/khushi/Downloads/mcp-rag-server/scripts/run_python_mcp.sh",
+         "cwd": "/Users/khushi/Downloads/mcp-rag-server",
+         "env": {
+            "MCP_CHROMA_PATH": "/Users/khushi/Downloads/mcp-rag-server/data/chroma_db"
+           }
+         }
+      }
    }
    ```
 
@@ -98,7 +110,7 @@ Crawl a website and store documents in the vector database.
 ```python
 await crawl_website(
     url="https://example.com",
-    max_pages=10,
+    max_pages=2,
     include_external=False
 )
 ```
@@ -114,9 +126,9 @@ Search the knowledge base using semantic search with optional keyword emphasis.
 **Example:**
 ```python
 results = await search_knowledge(
-    query="What is machine learning?",
+    query="What is feature scaling in machine learning?",
     n_results=5,
-    keywords=["neural networks", "algorithms"]
+    keywords=["feature", "scaling"]
 )
 ```
 
@@ -148,7 +160,7 @@ The server supports **keyword emphasis** in search queries, allowing users to fo
 # Focus on performance aspects
 search_knowledge(
     query="database optimization techniques",
-    keywords=["performance", "indexing", "caching"]
+    keywords=["database", "optimization"]
 )
 
 # Emphasize specific technologies
@@ -158,82 +170,12 @@ search_knowledge(
 )
 ```
 
-## Configuration
-
-### Basic Configuration (config.yaml)
-
-```yaml
-server:
-  name: "Web RAG Server"
-  version: "1.0.0"
-  
-chromadb:
-  persist_directory: "./chroma_db"
-  collection_name: "web_documents"
-  
-embedding:
-  model: "nomic-ai/nomic-embed-text-v1"
-  batch_size: 32
-  keyword_emphasis_multiplier: 2.0
-  
-crawling:
-  max_depth: 2
-  max_pages: 10
-  wait_time: 1.0
-  timeout: 30
-```
-
-### Environment Variables
-
-- `CHROMA_DB_PATH`: ChromaDB storage path
-- `EMBEDDING_MODEL`: Embedding model to use
-- `MAX_PAGES_PER_CRAWL`: Maximum pages per crawl
-- `LOG_LEVEL`: Logging level (INFO, DEBUG, ERROR)
-
-## Advanced Features
-
-### Content Extraction Strategies
-
-The server includes specialized extractors for different content types:
-
-- **Article Extractor**: For news articles and blog posts
-- **Product Extractor**: For e-commerce products
-- **Documentation Extractor**: For technical documentation
-- **Forum Extractor**: For discussion forums
-
-### Caching
-
-Built-in caching system to avoid redundant crawls:
-- 7-day cache expiration
-- Configurable cache directory
-- Automatic cache invalidation
-
-### Rate Limiting
-
-Configurable rate limiting to respect website policies:
-- Default: 60 requests per minute
-- Per-domain limiting
-- Automatic retry with backoff
-
 ## Development
 
 ### Running Tests
 
 ```bash
 pytest tests/
-```
-
-### Code Quality
-
-```bash
-# Format code
-black .
-
-# Lint code
-ruff check .
-
-# Type checking
-mypy .
 ```
 
 ## Deployment
