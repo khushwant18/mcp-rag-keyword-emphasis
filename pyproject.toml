@@ -1,0 +1,33 @@
+# Simple pyproject.toml for dependency management only
+[project]
+name = "mcp-rag-server"
+version = "1.0.0"
+description = "MCP Server with Crawl4AI and ChromaDB for RAG"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "crawl4ai>=0.3.0",
+    "chromadb>=0.4.0",
+    "sentence-transformers>=2.5.0",
+    "beautifulsoup4>=4.12.0",
+    "aiohttp>=3.9.0",
+    "numpy>=1.24.0",
+    "python-dotenv>=1.0.0",
+    "einops>=0.7.0",
+    "torch>=2.0.0",
+    "playwright>=1.40.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+]

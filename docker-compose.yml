@@ -1,0 +1,22 @@
+version: '3.11'
+
+services:
+  mcp-rag-server:
+    build: .
+    ports:
+      - "8000:8000"  # Expose port 8000
+    container_name: mcp-rag-server
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CHROMA_DB_PATH=/data/chroma_db
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/data
+      - ./logs:/logs
+    # MCP servers communicate via stdin/stdout, not HTTP ports
+    # Remove port mappings unless you're debugging
+    restart: unless-stopped
+    # Interactive mode for MCP communication
+    stdin_open: true
+    tty: true
+
