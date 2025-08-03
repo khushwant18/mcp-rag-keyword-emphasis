@@ -86,10 +86,10 @@ or
    {
    "mcpServers": {
          "web-rag": {
-         "command": "/Users/khushi/Downloads/mcp-rag-server/scripts/run_python_mcp.sh",
-         "cwd": "/Users/khushi/Downloads/mcp-rag-server",
+         "command": "mcp-rag-server/scripts/run_python_mcp.sh",
+         "cwd": "mcp-rag-server",
          "env": {
-            "MCP_CHROMA_PATH": "/Users/khushi/Downloads/mcp-rag-server/data/chroma_db"
+            "MCP_CHROMA_PATH": "mcp-rag-server/data/chroma_db"
            }
          }
       }
