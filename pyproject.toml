@@ -21,6 +21,7 @@ dependencies = [
     "einops>=0.7.0",
     "torch>=2.0.0",
     "playwright>=1.40.0",
+    "pymupdf4llm>=0.0.27",
 ]
 
 [project.optional-dependencies]

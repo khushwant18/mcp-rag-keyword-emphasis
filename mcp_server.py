@@ -34,6 +34,9 @@ import numpy as np
 # Additional utilities
 from bs4 import BeautifulSoup
 import aiohttp
+import pymupdf4llm
+import tempfile
+import os
 
 from config import EmbeddingConfig, CrawlConfig, DatabaseConfig
 from urllib.parse import urlparse
@@ -47,7 +50,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 browser_config = BrowserConfig(
         headless=True,
-        verbose=False  # Critical: suppress browser output
+        verbose=False, 
+    extra_args=[
+        "--disable-plugins-discovery",
+        "--disable-extensions-except",
+        "--disable-web-security"
+    ]
     )
 
 
@@ -463,7 +471,7 @@ class WebCrawler:
     def __init__(self, config: CrawlConfig = None):
         self.config = config or CrawlConfig()
         self.visited_urls = set()
-        self.crawler = None
+        self.crawler = AsyncWebCrawler(config=browser_config)
         self.content_cleaner = ContentCleaner()
         self.text_chunker = TextChunker()
         
@@ -485,6 +493,12 @@ class WebCrawler:
         logger.info(f"Crawling: {url}")
         
         try:
+            if url.endswith('.pdf') or '/pdf/' in url:
+                pdf_bytes = await self.download_pdf_directly(url)
+                if pdf_bytes:
+                    return await self.process_pdf_content(url, pdf_bytes)
+                else:
+                    logger.warning(f"Failed to download PDF directly, trying regular crawl")
             # Crawl4AI configuration - removed verbose parameter
             run_config = CrawlerRunConfig(
                 cache_mode=CacheMode.BYPASS,
@@ -493,7 +507,7 @@ class WebCrawler:
                 remove_overlay_elements=True,
                 excluded_tags=self.config.excluded_tags,
                 screenshot=False,
-                pdf=False
+                pdf=True
             )
             result = await self.crawler.arun(
                 url=url,
@@ -562,7 +576,111 @@ class WebCrawler:
         except Exception as e:
             logger.error(f"Error crawling {url}: {str(e)}")
             return None
-    
+        
+    async def download_pdf_directly(self, url: str) -> Optional[bytes]:
+        """Download PDF directly using aiohttp"""
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            async with aiohttp.ClientSession(headers=headers) as session:
+                logger.info(f"Attempting direct PDF download from: {url}")
+                
+                async with session.get(url, allow_redirects=True) as response:
+                    logger.info(f"Response status: {response.status}")
+                    logger.info(f"Content-Type: {response.headers.get('content-type', 'Unknown')}")
+                    logger.info(f"Content-Length: {response.headers.get('content-length', 'Unknown')}")
+                    
+                    if response.status == 200:
+                        content_type = response.headers.get('content-type', '').lower()
+                        
+                        # Check if it's actually a PDF
+                        if 'application/pdf' in content_type or 'pdf' in content_type:
+                            pdf_bytes = await response.read()
+                            
+                            # Verify PDF magic number
+                            if pdf_bytes.startswith(b'%PDF'):
+                                logger.info(f"Successfully downloaded valid PDF: {len(pdf_bytes)} bytes")
+                                return pdf_bytes
+                            else:
+                                logger.warning(f"Downloaded content is not a valid PDF (no PDF magic number)")
+                                logger.info(f"Content starts with: {pdf_bytes[:50]}")
+                                return None
+                        else:
+                            # Sometimes PDFs are served with wrong content-type, let's check the content anyway
+                            pdf_bytes = await response.read()
+                            if pdf_bytes.startswith(b'%PDF'):
+                                logger.info(f"Found PDF content despite wrong content-type: {len(pdf_bytes)} bytes")
+                                return pdf_bytes
+                            else:
+                                logger.warning(f"URL did not return PDF content. Content-Type: {content_type}")
+                                logger.info(f"Content preview: {pdf_bytes[:200]}")
+                                return None
+                    else:
+                        logger.warning(f"Failed to download PDF, status: {response.status}")
+                        logger.info(f"Response text: {await response.text()}")
+                        return None
+                        
+        except Exception as e:
+            logger.error(f"Error downloading PDF directly: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return None
+
+    async def process_pdf_content(self, url: str, pdf_bytes: bytes) -> Optional[Document]:
+        """Process PDF bytes and create a Document"""
+        try:
+            # Save PDF bytes to temp file
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
+                tmp_file.write(pdf_bytes)
+                tmp_file.flush()
+                
+                logger.info(f"Processing PDF: {tmp_file.name}")
+                
+                # Extract text using pymupdf4llm
+                markdown_content = pymupdf4llm.to_markdown(tmp_file.name)
+                
+            # Clean up temp file
+            os.unlink(tmp_file.name)
+            
+            logger.info(f"Extracted {len(markdown_content)} characters from PDF")
+            logger.info(f"Content preview: {markdown_content[:300]}...")
+            
+            if len(markdown_content.strip()) < 100:
+                logger.warning(f"PDF text extraction yielded too little content: {len(markdown_content)} chars")
+                return None
+            
+            # Create document from PDF content
+            title = "pdf document"
+            cleaned_content = self.content_cleaner.clean_markdown_content(markdown_content)
+            chunks = self.text_chunker.smart_chunk_markdown(cleaned_content, chunk_size=self.config.chunk_size)
+            
+            doc_id = hashlib.md5(url.encode()).hexdigest()
+            
+            return Document(
+                id=doc_id,
+                url=url,
+                title=title,
+                content=cleaned_content[:10000],
+                markdown=markdown_content,
+                chunks=chunks,
+                timestamp=datetime.now(),
+                metadata={
+                    "word_count": len(cleaned_content.split()),
+                    "char_count": len(cleaned_content),
+                    "chunk_count": len(chunks),
+                    "pdf_size_bytes": len(pdf_bytes),
+                    "source": "direct_pdf_download"
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"Error processing PDF content: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return None
+        
     def _extract_links(self, result: Any, base_url: str) -> List[str]:
         """Extract and filter links from crawl result"""
         links = []
@@ -606,7 +724,6 @@ class WebCrawler:
             
             if url in self.visited_urls or depth > max_depth:
                 continue
-                
             doc = await self.crawl_url(url, extract_links=True)
             if doc:
                 documents.append(doc)
@@ -846,7 +963,7 @@ class MCPCrawlerServer:
                             "chunk_size": {
                                 "type": "integer",
                                 "description": "Target size for content chunks",
-                                "default": 5000
+                                "default": 1000
                             },
                             "include_external": {
                                 "type": "boolean",
