@@ -77,7 +77,9 @@ if [[ -f "pyproject.toml" ]]; then
         "python-dotenv>=1.0.0" \
         "einops>=0.7.0" \
         "torch>=2.0.0" \
-        "playwright>=1.40.0"
+        "playwright>=1.40.0"\
+        "tempfile"\
+        "pymupdf4llm"
 else
     echo "No pyproject.toml found. Please create one with your dependencies."
     exit 1
