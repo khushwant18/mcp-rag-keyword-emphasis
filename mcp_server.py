@@ -80,7 +80,8 @@ class EmbeddingManager:
         logger.info(f"Initializing embedding model: {self.config.model_name}")
         self.model = SentenceTransformer(
             self.config.model_name, 
-            trust_remote_code=self.config.trust_remote_code
+            trust_remote_code=self.config.trust_remote_code,
+            device=self.config.device
         )
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
         
@@ -963,7 +964,7 @@ class MCPCrawlerServer:
                             "chunk_size": {
                                 "type": "integer",
                                 "description": "Target size for content chunks",
-                                "default": 1000
+                                "default": 3000
                             },
                             "include_external": {
                                 "type": "boolean",
